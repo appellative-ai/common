@@ -1,0 +1,15 @@
+RUNTIME_ENV_KEY : RT_ENV
+ingress-listener-addr : 0.0.0.0:8086
+egress-listener-addr : 0.0.0.0:8087
+ORIGIN-REGION : region
+ORIGIN-ZONE : zone
+
+ORIGIN-SUB-ZONE : sub-zone
+  // This is a comment
+ORIGIN-SERVICE : service
+ORIGIN-INSTANCE-ID : instance-id
+
+
+
+
+
