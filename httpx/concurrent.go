@@ -26,7 +26,7 @@ type Result struct {
 	cancel func()
 }
 
-func newResult(p *Params) *Result {
+func newResult(p Params) *Result {
 	r := new(Result)
 	r.Name = p.Name
 	r.Req = p.Req
@@ -34,7 +34,7 @@ func newResult(p *Params) *Result {
 	return r
 }
 
-func DoConcurrent[T Logger](do core.Exchange, args ...Params) *core.MapT[string, *Result] {
+func DoConcurrent[T Logger](do func(req *http.Request) (*http.Response, error), args ...Params) *core.MapT[string, *Result] {
 	var wg sync.WaitGroup
 	var t T
 
@@ -42,14 +42,13 @@ func DoConcurrent[T Logger](do core.Exchange, args ...Params) *core.MapT[string,
 	m := core.NewSyncMap[string, *Result]()
 	for i := 0; i < cnt; i++ {
 		wg.Add(1)
-		go func(p *Params) {
+		go func(r *Result) {
 			defer wg.Done()
-			r := newResult(p)
 			start := time.Now().UTC()
 			r.Resp, r.Err = do(r.Req)
-			t.Log(start, time.Since(start), p.Name, r.Req, r.Resp, timeout(r.Req.Context()))
+			t.Log(start, time.Since(start), r.Name, r.Req, r.Resp, timeout(r.Req.Context()))
 			m.Store(r.Name, r)
-		}(&args[i])
+		}(newResult(args[i]))
 	}
 	wg.Wait()
 	return m
