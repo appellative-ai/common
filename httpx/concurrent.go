@@ -1,72 +1,64 @@
 package httpx
 
 import (
+	"context"
 	"github.com/appellative-ai/common/core"
 	"net/http"
 	"sync"
 	"time"
 )
 
-type LogFunc func(start time.Time, duration time.Duration, req *http.Request, resp *http.Response, timeout time.Duration)
-
-type ConcurrentResult interface {
-	Get(name string) *ExchangeResponse
+type Logger interface {
+	Log(start time.Time, duration time.Duration, routeName string, req *http.Request, resp *http.Response, timeout time.Duration)
 }
 
-type ExchangeInvoke struct {
-	Name    string
-	Timeout time.Duration
-	Do      core.Exchange
-	Req     *http.Request
+type Params struct {
+	Name   string
+	Req    *http.Request
+	cancel func()
 }
 
-type ExchangeResponse struct {
-	Resp *http.Response
-	Err  error
+type Result struct {
+	Name   string
+	Req    *http.Request
+	Resp   *http.Response
+	Err    error
+	cancel func()
 }
 
-func DoConcurrent(invokes []ExchangeInvoke, logger LogFunc) ConcurrentResult {
+func newResult(p *Params) *Result {
+	r := new(Result)
+	r.Name = p.Name
+	r.Req = p.Req
+	r.cancel = p.cancel
+	return r
+}
+
+func DoConcurrent[T Logger](do core.Exchange, args ...Params) *core.MapT[string, *Result] {
 	var wg sync.WaitGroup
+	var t T
 
-	cnt := len(invokes)
-	m := newResults()
+	cnt := len(args)
+	m := core.NewSyncMap[string, *Result]()
 	for i := 0; i < cnt; i++ {
 		wg.Add(1)
-		go func(i *ExchangeInvoke) {
+		go func(p *Params) {
 			defer wg.Done()
+			r := newResult(p)
 			start := time.Now().UTC()
-			resp, err := Do(i.Req)
-			if logger != nil {
-				logger(start, time.Since(start), i.Req, resp, i.Timeout)
-			}
-			m.put(i.Name, &ExchangeResponse{Resp: resp, Err: err})
-		}(&invokes[i])
+			r.Resp, r.Err = do(r.Req)
+			t.Log(start, time.Since(start), p.Name, r.Req, r.Resp, timeout(r.Req.Context()))
+			m.Store(r.Name, r)
+		}(&args[i])
 	}
 	wg.Wait()
 	return m
 }
 
-type results struct {
-	m *sync.Map
-}
-
-func newResults() *results {
-	c := new(results)
-	c.m = new(sync.Map)
-	return c
-}
-
-func (e *results) Get(name string) *ExchangeResponse {
-	value, ok := e.m.Load(name)
-	if !ok {
-		return nil
+func timeout(ctx context.Context) time.Duration {
+	var t time.Duration
+	if d, ok := ctx.Deadline(); ok {
+		t = time.Until(d)
 	}
-	if value1, ok1 := value.(*ExchangeResponse); ok1 {
-		return value1
-	}
-	return nil
-}
-
-func (e *results) put(name string, r *ExchangeResponse) {
-	e.m.Store(name, r)
+	return t
 }
