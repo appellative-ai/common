@@ -13,24 +13,21 @@ type Logger interface {
 }
 
 type Params struct {
-	Name   string
-	Req    *http.Request
-	cancel func()
+	Name string
+	Req  *http.Request
 }
 
 type Result struct {
-	Name   string
-	Req    *http.Request
-	Resp   *http.Response
-	Err    error
-	cancel func()
+	Name string
+	Req  *http.Request
+	Resp *http.Response
+	Err  error
 }
 
 func newResult(p Params) *Result {
 	r := new(Result)
 	r.Name = p.Name
 	r.Req = p.Req
-	r.cancel = p.cancel
 	return r
 }
 
