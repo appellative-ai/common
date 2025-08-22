@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/appellative-ai/common/iox"
 	"io"
 	"net/http"
 	"reflect"
@@ -14,16 +15,35 @@ const (
 )
 
 // TransformBody - read the body and create a new []byte buffer reader
-func TransformBody(resp *http.Response) error {
+func TransformBody(resp *http.Response, h http.Header) error {
 	if resp == nil || resp.Body == nil {
 		return nil
 	}
-	buf, err := readAll(resp.Body)
-	if err == nil {
-		resp.ContentLength = int64(len(buf))
-		resp.Body = io.NopCloser(bytes.NewReader(buf))
+	var ce string
+	if h != nil {
+		ce = h.Get(ContentEncoding)
 	}
-	return err
+	if ce == "" || ce == iox.NoneEncoding {
+		buf, err := readAll(resp.Body)
+		if err == nil {
+			resp.ContentLength = int64(len(buf))
+			resp.Body = io.NopCloser(bytes.NewReader(buf))
+		}
+		return err
+	}
+	r, err := iox.NewEncodingReader(resp.Body, h)
+	if err != nil {
+		return err
+	}
+	var buf []byte
+	cnt, err2 := r.Read(buf)
+	if err2 != nil {
+		return err2
+	}
+	resp.ContentLength = int64(cnt)
+	resp.Body = io.NopCloser(bytes.NewReader(buf))
+	return nil
+
 }
 
 func NewResponse(statusCode int, h http.Header, content any) (resp *http.Response) {
