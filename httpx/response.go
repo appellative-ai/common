@@ -40,6 +40,7 @@ func TransformBody(resp *http.Response) error {
 	if err2 != nil {
 		return err2
 	}
+	resp.Header.Del(ContentEncoding)
 	resp.ContentLength = int64(cnt)
 	resp.Body = io.NopCloser(bytes.NewReader(buf))
 	return nil
