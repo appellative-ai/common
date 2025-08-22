@@ -34,13 +34,12 @@ func newResult(p Params) *Result {
 	return r
 }
 
-func DoConcurrent[T Logger](do func(req *http.Request) (*http.Response, error), args ...Params) *core.MapT[string, *Result] {
+func DoConcurrent[T Logger](do func(req *http.Request) (*http.Response, error), params ...Params) *core.MapT[string, *Result] {
 	var wg sync.WaitGroup
 	var t T
 
-	cnt := len(args)
 	m := core.NewSyncMap[string, *Result]()
-	for i := 0; i < cnt; i++ {
+	for _, p := range params {
 		wg.Add(1)
 		go func(r *Result) {
 			defer wg.Done()
@@ -48,7 +47,7 @@ func DoConcurrent[T Logger](do func(req *http.Request) (*http.Response, error), 
 			r.Resp, r.Err = do(r.Req)
 			t.Log(start, time.Since(start), r.Name, r.Req, r.Resp, timeout(r.Req.Context()))
 			m.Store(r.Name, r)
-		}(newResult(args[i]))
+		}(newResult(p))
 	}
 	wg.Wait()
 	return m
