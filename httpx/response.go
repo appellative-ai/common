@@ -15,13 +15,13 @@ const (
 )
 
 // TransformBody - read the body and create a new []byte buffer reader
-func TransformBody(resp *http.Response, h http.Header) error {
+func TransformBody(resp *http.Response) error {
 	if resp == nil || resp.Body == nil {
 		return nil
 	}
 	var ce string
-	if h != nil {
-		ce = h.Get(ContentEncoding)
+	if resp.Header != nil {
+		ce = resp.Header.Get(ContentEncoding)
 	}
 	if ce == "" || ce == iox.NoneEncoding {
 		buf, err := readAll(resp.Body)
@@ -31,7 +31,7 @@ func TransformBody(resp *http.Response, h http.Header) error {
 		}
 		return err
 	}
-	r, err := iox.NewEncodingReader(resp.Body, h)
+	r, err := iox.NewEncodingReader(resp.Body, resp.Header)
 	if err != nil {
 		return err
 	}
