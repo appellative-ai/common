@@ -4,7 +4,13 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"net/http"
+	"os"
 	"reflect"
+)
+
+const (
+	searchResultsGzip = "file://[cwd]/ioxtest/test-response.gz"
 )
 
 func ExampleIdentityReader() {
@@ -61,7 +67,6 @@ func ExampleEncodingReader_Error() {
 
 */
 
-/*
 func ExampleEncodingReader_Gzip() {
 	s := searchResultsGzip
 	buf0, err0 := os.ReadFile(FileName(s))
@@ -71,15 +76,13 @@ func ExampleEncodingReader_Gzip() {
 	}
 	r := bytes.NewReader(buf0)
 
-	h := make(httpx.Header)
+	h := make(http.Header)
 	h.Set(ContentEncoding, GzipEncoding)
-	zr, _ := EncodingReader(r, h)
-	buf, err := iox.ReadAll(zr)
-	fmt.Printf("test: iox.ReadAll() -> [input:%v] [output:%v] [err:%v]\n", httpx.DetectContentType(buf0), httpx.DetectContentType(buf), err)
+	zr, _ := NewEncodingReader(r, h)
+	buf, err := ReadAll(zr, nil)
+	fmt.Printf("test: iox.ReadAll() -> [input:%v] [output:%v] [err:%v]\n", http.DetectContentType(buf0), http.DetectContentType(buf), err)
 
 	//Output:
-	//test: iox.ReadAll() -> [input:application/x-gzip] [output:text/html; charset=utf-8] [err:<nil>]
+	//test: iox.ReadAll() -> [input:application/x-gzip] [output:text/plain; charset=utf-8] [err:<nil>]
 
 }
-
-*/

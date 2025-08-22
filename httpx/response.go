@@ -35,13 +35,12 @@ func TransformBody(resp *http.Response) error {
 	if err != nil {
 		return err
 	}
-	var buf []byte
-	cnt, err2 := r.Read(buf)
+	buf, err2 := iox.ReadAll(r, nil)
 	if err2 != nil {
 		return err2
 	}
 	resp.Header.Del(ContentEncoding)
-	resp.ContentLength = int64(cnt)
+	resp.ContentLength = int64(len(buf))
 	resp.Body = io.NopCloser(bytes.NewReader(buf))
 	return nil
 
